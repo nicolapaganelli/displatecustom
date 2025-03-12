@@ -6,12 +6,19 @@ import sharp from 'sharp';
 const app = express();
 const upload = multer();
 
-// Enable CORS for all routes
+// Enable CORS with more permissive settings
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://nicolapaganelli.github.io'],
-  methods: ['GET', 'POST'],
-  credentials: true
+  origin: '*', // Allow all origins temporarily for testing
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false // Set to false since we're using origin: '*'
 }));
+
+// Add logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Basic error handling middleware
 app.use((err, req, res, next) => {
@@ -19,14 +26,25 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// Add a test endpoint
+app.get('/', (req, res) => {
+  res.json({ message: 'Server is running' });
+});
+
 app.post('/process-image', upload.single('image'), async (req, res) => {
   try {
+    console.log('Received image processing request');
+    
     if (!req.file) {
+      console.log('No file received');
       return res.status(400).json({ error: 'No image file provided' });
     }
 
+    console.log('File received:', req.file.originalname, 'Size:', req.file.size);
+
     const buffer = req.file.buffer;
     const metadata = await sharp(buffer).metadata();
+    console.log('Image metadata:', metadata);
     
     // Determine image orientation
     const isVertical = metadata.height > metadata.width;
@@ -88,20 +106,22 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
       .jpeg({ quality: 100, mozjpeg: true }) // Using mozjpeg for better compression while maintaining quality
       .toBuffer();
 
+    console.log('Image processed successfully');
     res.set('Content-Type', 'image/jpeg');
     res.send(processedBuffer);
   } catch (error) {
     console.error('Error processing image:', error);
-    res.status(500).json({ error: 'Failed to process image' });
+    res.status(500).json({ error: 'Failed to process image: ' + error.message });
   }
 });
 
 const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || 'localhost';
+const HOST = process.env.HOST || '0.0.0.0'; // Changed to 0.0.0.0 to accept all incoming connections
 
 // Add proper error handling for the server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
+  console.log('CORS enabled for all origins');
 }).on('error', (error) => {
   if (error.code === 'EADDRINUSE') {
     console.error(`Port ${PORT} is already in use. Please kill the process using that port and try again.`);
