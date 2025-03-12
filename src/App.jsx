@@ -65,30 +65,43 @@ function App() {
     
     try {
       setProcessing(true);
+      console.log('Starting image processing...');
       
       // Convert base64 to blob
       const response = await fetch(image);
       const blob = await response.blob();
+      console.log('Image converted to blob');
       
       // Create form data
       const formData = new FormData();
       formData.append('image', blob);
+      console.log('FormData created');
+
+      // Log the URL we're sending to
+      console.log('Sending request to:', 'https://displatecustom-backend.onrender.com/process-image');
 
       // Send to server
       const processedResponse = await fetch('https://displatecustom-backend.onrender.com/process-image', {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'omit'
       });
 
+      console.log('Response status:', processedResponse.status);
+      
       if (!processedResponse.ok) {
-        throw new Error('Failed to process image');
+        const errorText = await processedResponse.text();
+        console.error('Server response:', errorText);
+        throw new Error(`Failed to process image: ${processedResponse.status} ${errorText}`);
       }
 
       const processedBlob = await processedResponse.blob();
       const processedUrl = URL.createObjectURL(processedBlob);
       setProcessedImage(processedUrl);
+      console.log('Image processed successfully');
     } catch (error) {
       console.error('Failed to process image:', error);
+      alert('Error processing image: ' + error.message);
     } finally {
       setProcessing(false);
     }
