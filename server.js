@@ -6,11 +6,16 @@ import sharp from 'sharp';
 const app = express();
 const upload = multer();
 
-// Enable CORS with more permissive settings
-app.use(cors());  // Allow all origins by default
+// Enable CORS with environment-aware settings
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://displater.vercel.app', 'https://displater.netlify.app'] // Update these with your actual frontend URLs
+    : 'http://localhost:5173',
+  credentials: true
+}));
 
 // Add OPTIONS handling for preflight requests
-app.options('*', cors());  // Enable pre-flight for all routes
+app.options('*', cors());
 
 // Add logging middleware
 app.use((req, res, next) => {
@@ -42,6 +47,11 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
+    // Get center point coordinates
+    const centerX = parseFloat(req.body.centerX) || 0.5;
+    const centerY = parseFloat(req.body.centerY) || 0.5;
+    console.log('Center point:', { centerX, centerY });
+
     console.log('File received:', req.file.originalname, 'Size:', req.file.size);
 
     const buffer = req.file.buffer;
@@ -54,63 +64,55 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
     // Calculate final target dimensions based on orientation
     let finalWidth, finalHeight;
     if (isVertical) {
-      // For vertical images: height should be 1.4 times the width
       finalWidth = 2900;
-      finalHeight = Math.round(finalWidth * 1.4); // This will be ~4060
+      finalHeight = Math.round(finalWidth * 1.4);
     } else {
-      // For horizontal images: width should be 1.4 times the height
       finalHeight = 2900;
-      finalWidth = Math.round(finalHeight * 1.4); // This will be ~4060
+      finalWidth = Math.round(finalHeight * 1.4);
     }
 
     // Calculate crop dimensions to maintain proper aspect ratio
     let cropWidth, cropHeight;
     if (isVertical) {
-      // For vertical images, maintain 1:1.4 ratio (height = 1.4 * width)
       if (metadata.width * 1.4 <= metadata.height) {
-        // Can use full width
         cropWidth = metadata.width;
         cropHeight = Math.round(cropWidth * 1.4);
       } else {
-        // Use full height and calculate width
         cropHeight = metadata.height;
         cropWidth = Math.round(cropHeight / 1.4);
       }
     } else {
-      // For horizontal images, maintain 1.4:1 ratio (width = 1.4 * height)
       if (metadata.height * 1.4 <= metadata.width) {
-        // Can use full height
         cropHeight = metadata.height;
         cropWidth = Math.round(cropHeight * 1.4);
       } else {
-        // Use full width and calculate height
         cropWidth = metadata.width;
         cropHeight = Math.round(cropWidth / 1.4);
       }
     }
 
-    // Calculate crop offset to center the image
-    const left = Math.round((metadata.width - cropWidth) / 2);
-    const top = Math.round((metadata.height - cropHeight) / 2);
+    // Calculate crop offset based on center point
+    const maxLeft = metadata.width - cropWidth;
+    const maxTop = metadata.height - cropHeight;
+    const left = Math.round(Math.max(0, Math.min(maxLeft, metadata.width * centerX - cropWidth / 2)));
+    const top = Math.round(Math.max(0, Math.min(maxTop, metadata.height * centerY - cropHeight / 2)));
 
-    // Process the image:
-    // 1. First crop to correct aspect ratio
-    // 2. Then resize to final dimensions with high-quality settings
+    console.log('Crop parameters:', { left, top, cropWidth, cropHeight });
+
+    // Process the image with the new center point
     const processedBuffer = await sharp(buffer)
-      // Step 1: Crop to correct aspect ratio
       .extract({ left, top, width: cropWidth, height: cropHeight })
-      // Step 2: Resize to final dimensions with high-quality settings
       .resize(finalWidth, finalHeight, {
         fit: 'fill',
         withoutEnlargement: false,
-        kernel: 'lanczos3',  // High-quality resampling
+        kernel: 'lanczos3',
       })
-      .jpeg({ quality: 100, mozjpeg: true }) // Using mozjpeg for better compression while maintaining quality
+      .jpeg({ quality: 100, mozjpeg: true })
       .toBuffer();
 
     console.log('Image processed successfully');
     res.set('Content-Type', 'image/jpeg');
-    res.set('Access-Control-Allow-Origin', '*');  // Ensure CORS headers are set for the response
+    res.set('Access-Control-Allow-Origin', '*');
     res.send(processedBuffer);
   } catch (error) {
     console.error('Error processing image:', error);
@@ -119,11 +121,11 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || '0.0.0.0';
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
 
 const server = app.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
-  console.log('CORS enabled for all origins');
+  console.log(`CORS enabled for ${process.env.NODE_ENV === 'production' ? 'production' : 'development'} environment`);
 }).on('error', (error) => {
   if (error.code === 'EADDRINUSE') {
     console.error(`Port ${PORT} is already in use. Please kill the process using that port and try again.`);

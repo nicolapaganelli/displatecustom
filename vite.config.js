@@ -10,7 +10,7 @@ export default defineConfig(({ command }) => ({
     open: true // This will open the browser automatically
   },
   // Use the repository name as base URL in production
-  base: command === 'build' ? '/displatecustom/' : '/',
+  base: '/displatecustom/',
   build: {
     outDir: 'dist',
     sourcemap: true

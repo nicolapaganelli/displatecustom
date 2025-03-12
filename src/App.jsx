@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Box, Typography, Paper, Container, Alert, Button, CircularProgress, ThemeProvider, createTheme } from '@mui/material';
 
 // Create a custom theme inspired by Displate
@@ -50,6 +50,11 @@ function App() {
   const [processedImage, setProcessedImage] = useState(null);
   const [validation, setValidation] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [centerPoint, setCenterPoint] = useState(null);
+  const [selectingCenter, setSelectingCenter] = useState(false);
+  const imageRef = useRef(null);
+  const [previewRect, setPreviewRect] = useState(null);
+  const containerRef = useRef(null);
 
   const validateImage = (file) => {
     return new Promise((resolve) => {
@@ -104,8 +109,128 @@ function App() {
     input.click();
   };
 
+  const calculateCropPreview = (image, mouseX, mouseY) => {
+    if (!image || !containerRef.current) return null;
+
+    const container = containerRef.current;
+    const rect = container.getBoundingClientRect();
+    const imageAspect = image.naturalHeight / image.naturalWidth;
+    const containerAspect = rect.height / rect.width;
+
+    let imageDisplayWidth, imageDisplayHeight;
+    let imageLeft = 0, imageTop = 0;
+
+    // Calculate displayed image dimensions
+    if (imageAspect > containerAspect) {
+      imageDisplayHeight = rect.height;
+      imageDisplayWidth = rect.height / imageAspect;
+      imageLeft = (rect.width - imageDisplayWidth) / 2;
+    } else {
+      imageDisplayWidth = rect.width;
+      imageDisplayHeight = rect.width * imageAspect;
+      imageTop = (rect.height - imageDisplayHeight) / 2;
+    }
+
+    // Determine if the image should be treated as vertical or horizontal for Displate
+    const isVertical = image.naturalHeight > image.naturalWidth * 1.4;
+    let cropWidth, cropHeight;
+
+    if (isVertical) {
+      // For vertical images, maintain 1.4:1 (height:width) ratio
+      cropWidth = Math.min(imageDisplayWidth, imageDisplayHeight / 1.4);
+      cropHeight = cropWidth * 1.4;
+    } else {
+      // For horizontal images, maintain 1:1.4 (height:width) ratio
+      cropHeight = Math.min(imageDisplayHeight, imageDisplayWidth / 1.4);
+      cropWidth = cropHeight * 1.4;
+    }
+
+    // Calculate crop position based on mouse position
+    const cropLeft = Math.max(
+      imageLeft,
+      Math.min(
+        imageLeft + imageDisplayWidth - cropWidth,
+        mouseX - cropWidth / 2
+      )
+    );
+    const cropTop = Math.max(
+      imageTop,
+      Math.min(
+        imageTop + imageDisplayHeight - cropHeight,
+        mouseY - cropHeight / 2
+      )
+    );
+
+    return {
+      left: cropLeft,
+      top: cropTop,
+      width: cropWidth,
+      height: cropHeight
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!selectingCenter || !imageRef.current || centerPoint) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const preview = calculateCropPreview(
+      imageRef.current,
+      e.clientX - rect.left,
+      e.clientY - rect.top
+    );
+    setPreviewRect(preview);
+  };
+
+  const handleImageClick = (e) => {
+    if (!selectingCenter || !imageRef.current) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const normalizedX = (e.clientX - rect.left) / rect.width;
+    const normalizedY = (e.clientY - rect.top) / rect.height;
+    
+    setCenterPoint({ 
+      x: normalizedX,
+      y: normalizedY
+    });
+    
+    const preview = calculateCropPreview(
+      imageRef.current,
+      e.clientX - rect.left,
+      e.clientY - rect.top
+    );
+    setPreviewRect(preview);
+  };
+
+  const handleImageLoad = () => {
+    if (imageRef.current && centerPoint) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const preview = calculateCropPreview(
+        imageRef.current,
+        centerPoint.x * rect.width,
+        centerPoint.y * rect.height
+      );
+      setPreviewRect(preview);
+    }
+  };
+
+  const startCentering = () => {
+    setSelectingCenter(true);
+    setCenterPoint(null);
+    setPreviewRect(null);
+  };
+
+  const confirmCentering = () => {
+    setSelectingCenter(false);
+  };
+
+  const cancelCentering = () => {
+    setSelectingCenter(false);
+    setCenterPoint(null);
+    setPreviewRect(null);
+  };
+
   const handleProcess = async () => {
-    if (!image) return;
+    if (!image || !centerPoint) return;
     
     try {
       setProcessing(true);
@@ -116,16 +241,21 @@ function App() {
       const blob = await response.blob();
       console.log('Image converted to blob');
       
-      // Create form data
+      // Create form data with center point information
       const formData = new FormData();
       formData.append('image', blob);
-      console.log('FormData created');
+      formData.append('centerX', centerPoint.x.toString());
+      formData.append('centerY', centerPoint.y.toString());
+      console.log('FormData created with center point:', centerPoint);
 
       // Log the URL we're sending to
-      console.log('Sending request to:', 'https://displatecustom.onrender.com/process-image');
+      const apiUrl = process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:3001/process-image'
+        : 'https://displatecustom.onrender.com/process-image';
+      console.log('Sending request to:', apiUrl);
 
       // Send to server
-      const processedResponse = await fetch('https://displatecustom.onrender.com/process-image', {
+      const processedResponse = await fetch(apiUrl, {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -241,47 +371,162 @@ function App() {
               {image && (
                 <Paper sx={{ p: 4, mb: 3 }}>
                   <Typography variant="h6" gutterBottom align="center">
-                    Original Image
+                    {selectingCenter ? 'Click to Set Center Point' : 'Original Image'}
                   </Typography>
                   <Box sx={{
                     position: 'relative',
                     width: '100%',
-                    pt: '75%', // 4:3 Aspect Ratio
-                    mb: 2
-                  }}>
-                    <img 
-                      src={image} 
-                      alt="Original" 
-                      style={{
+                    pt: '75%',
+                    mb: 2,
+                    cursor: selectingCenter ? 'crosshair' : 'default',
+                    overflow: 'hidden',
+                    bgcolor: '#000',
+                    borderRadius: 1
+                  }} ref={containerRef}>
+                    <Box
+                      sx={{
                         position: 'absolute',
                         top: 0,
                         left: 0,
                         width: '100%',
                         height: '100%',
-                        objectFit: 'contain',
+                        overflow: 'hidden'
                       }}
-                    />
+                      onMouseMove={handleMouseMove}
+                    >
+                      <img 
+                        ref={imageRef}
+                        src={image} 
+                        alt="Original" 
+                        onClick={handleImageClick}
+                        onLoad={handleImageLoad}
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          width: '100%',
+                          height: '100%',
+                          transform: 'translate(-50%, -50%)',
+                          objectFit: 'contain'
+                        }}
+                      />
+                      {selectingCenter && previewRect && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            left: `${previewRect.left}px`,
+                            top: `${previewRect.top}px`,
+                            width: `${previewRect.width}px`,
+                            height: `${previewRect.height}px`,
+                            border: '2px solid rgba(255, 255, 255, 0.8)',
+                            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+                            pointerEvents: 'none'
+                          }}
+                        />
+                      )}
+                      {centerPoint && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            left: `${centerPoint.x * 100}%`,
+                            top: `${centerPoint.y * 100}%`,
+                            width: '20px',
+                            height: '20px',
+                            transform: 'translate(-50%, -50%)',
+                            border: '2px solid red',
+                            borderRadius: '50%',
+                            pointerEvents: 'none',
+                            '&::before, &::after': {
+                              content: '""',
+                              position: 'absolute',
+                              backgroundColor: 'red',
+                            },
+                            '&::before': {
+                              left: '50%',
+                              width: '2px',
+                              height: '100%',
+                              transform: 'translateX(-50%)',
+                            },
+                            '&::after': {
+                              top: '50%',
+                              width: '100%',
+                              height: '2px',
+                              transform: 'translateY(-50%)',
+                            },
+                            zIndex: 2,
+                          }}
+                        />
+                      )}
+                    </Box>
                   </Box>
-                  {!processedImage && (
-                    <Box sx={{ textAlign: 'center' }}>
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    '& > button': { 
+                      mx: 1,
+                      minWidth: { xs: '120px', sm: '140px' } 
+                    } 
+                  }}>
+                    {!selectingCenter && !processedImage && !centerPoint && (
                       <Button 
                         variant="contained" 
                         color="primary"
-                        onClick={handleProcess}
-                        disabled={processing}
+                        onClick={startCentering}
                         size="large"
                       >
-                        {processing ? (
-                          <>
-                            <CircularProgress size={24} sx={{ mr: 1 }} color="inherit" />
-                            Processing...
-                          </>
-                        ) : (
-                          'Process Image'
-                        )}
+                        Set Center Point
                       </Button>
-                    </Box>
-                  )}
+                    )}
+                    {selectingCenter && (
+                      <>
+                        <Button 
+                          variant="contained" 
+                          color="error"
+                          onClick={cancelCentering}
+                          size="large"
+                        >
+                          Cancel
+                        </Button>
+                        {centerPoint && (
+                          <Button 
+                            variant="contained" 
+                            color="primary"
+                            onClick={confirmCentering}
+                            size="large"
+                          >
+                            Confirm
+                          </Button>
+                        )}
+                      </>
+                    )}
+                    {!selectingCenter && centerPoint && !processedImage && (
+                      <>
+                        <Button 
+                          variant="outlined" 
+                          color="primary"
+                          onClick={startCentering}
+                          size="large"
+                        >
+                          Adjust Center
+                        </Button>
+                        <Button 
+                          variant="contained" 
+                          color="primary"
+                          onClick={handleProcess}
+                          disabled={processing}
+                          size="large"
+                        >
+                          {processing ? (
+                            <>
+                              <CircularProgress size={24} sx={{ mr: 1 }} color="inherit" />
+                              Processing...
+                            </>
+                          ) : (
+                            'Process Image'
+                          )}
+                        </Button>
+                      </>
+                    )}
+                  </Box>
                 </Paper>
               )}
 
