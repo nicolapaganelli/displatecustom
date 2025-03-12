@@ -1,5 +1,49 @@
 import { useState } from 'react';
-import { Box, Typography, Paper, Container, Alert, Button, CircularProgress } from '@mui/material';
+import { Box, Typography, Paper, Container, Alert, Button, CircularProgress, ThemeProvider, createTheme } from '@mui/material';
+
+// Create a custom theme inspired by Displate
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2', // Displate-like blue
+    },
+    background: {
+      default: '#f5f5f5',
+      paper: '#ffffff',
+    },
+  },
+  typography: {
+    h4: {
+      fontWeight: 700,
+      letterSpacing: '0.02em',
+      marginBottom: '1.5rem',
+    },
+    h6: {
+      fontWeight: 600,
+      letterSpacing: '0.01em',
+    },
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          textTransform: 'none',
+          padding: '10px 24px',
+          fontSize: '1rem',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        },
+      },
+    },
+  },
+});
 
 function App() {
   const [image, setImage] = useState(null);
@@ -119,102 +163,166 @@ function App() {
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom align="center">
-        Image Processor
-      </Typography>
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Image Requirements
-        </Typography>
-        <ul>
-          <li>High-quality images in JPG, PNG, WEBp, or AVIF format</li>
-          <li>File size should be at least 2900 x 4060 px in a 1.4:1 ratio</li>
-          <li>300 DPI (or more) in RGB mode</li>
-        </ul>
-      </Paper>
-
-      <Paper
-        sx={{
-          p: 4,
-          mb: 3,
-          textAlign: 'center',
-          border: '2px dashed #ccc',
-          cursor: 'pointer'
-        }}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onClick={handleClick}
-      >
-        <Typography>
-          Drag and drop an image here, or click to select one
-        </Typography>
-      </Paper>
-
-      {validation && validation.length > 0 && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography gutterBottom>The image will be adjusted:</Typography>
-          <ul>
-            {validation.map((warning, index) => (
-              <li key={index}>{warning}</li>
-            ))}
-          </ul>
-        </Alert>
-      )}
-
-      {image && (
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography variant="h6" gutterBottom>
-            Original Image
+    <ThemeProvider theme={theme}>
+      <Box sx={{ 
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+        py: 6
+      }}>
+        <Container maxWidth="lg">
+          <Typography variant="h4" component="h1" align="center" sx={{ mb: 4 }}>
+            Displate Image Processor
           </Typography>
-          <img 
-            src={image} 
-            alt="Original" 
-            style={{ maxWidth: '100%', maxHeight: '300px', marginBottom: '20px' }} 
-          />
-          {!processedImage && (
-            <Button 
-              variant="contained" 
-              color="primary"
-              onClick={handleProcess}
-              disabled={processing}
-              sx={{ mt: 2 }}
-            >
-              {processing ? (
-                <>
-                  <CircularProgress size={24} sx={{ mr: 1 }} color="inherit" />
-                  Processing...
-                </>
-              ) : (
-                'Process Image'
+
+          <Box sx={{ 
+            display: 'grid',
+            gap: 4,
+            gridTemplateColumns: { md: '1fr 1fr' },
+            alignItems: 'start'
+          }}>
+            {/* Left Column */}
+            <Box>
+              <Paper sx={{ p: 4, mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Image Requirements
+                </Typography>
+                <Box component="ul" sx={{ 
+                  pl: 2,
+                  '& li': { 
+                    mb: 1,
+                    color: 'text.secondary',
+                    fontSize: '0.95rem'
+                  }
+                }}>
+                  <li>High-quality images in JPG, PNG, WEBp, or AVIF format</li>
+                  <li>File size should be at least 2900 x 4060 px in a 1.4:1 ratio</li>
+                  <li>300 DPI (or more) in RGB mode</li>
+                </Box>
+              </Paper>
+
+              <Paper
+                sx={{
+                  p: 4,
+                  textAlign: 'center',
+                  border: '2px dashed rgba(25, 118, 210, 0.2)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: 'rgba(25, 118, 210, 0.04)'
+                  }
+                }}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onClick={handleClick}
+              >
+                <Typography sx={{ color: 'text.secondary' }}>
+                  Drag and drop an image here, or click to select one
+                </Typography>
+              </Paper>
+
+              {validation && validation.length > 0 && (
+                <Alert severity="info" sx={{ mt: 3 }}>
+                  <Typography gutterBottom>The image will be adjusted:</Typography>
+                  <Box component="ul" sx={{ pl: 2, mb: 0 }}>
+                    {validation.map((warning, index) => (
+                      <li key={index}>{warning}</li>
+                    ))}
+                  </Box>
+                </Alert>
               )}
-            </Button>
-          )}
-        </Box>
-      )}
+            </Box>
 
-      {processedImage && (
-        <Box sx={{ mt: 4, textAlign: 'center' }}>
-          <Typography variant="h6" gutterBottom>
-            Processed Image
-          </Typography>
-          <img 
-            src={processedImage} 
-            alt="Processed" 
-            style={{ maxWidth: '100%', maxHeight: '300px', marginBottom: '20px' }} 
-          />
-          <Button 
-            variant="contained" 
-            color="primary"
-            onClick={handleDownload}
-            sx={{ mt: 2 }}
-          >
-            Download
-          </Button>
-        </Box>
-      )}
-    </Container>
+            {/* Right Column */}
+            <Box>
+              {image && (
+                <Paper sx={{ p: 4, mb: 3 }}>
+                  <Typography variant="h6" gutterBottom align="center">
+                    Original Image
+                  </Typography>
+                  <Box sx={{
+                    position: 'relative',
+                    width: '100%',
+                    pt: '75%', // 4:3 Aspect Ratio
+                    mb: 2
+                  }}>
+                    <img 
+                      src={image} 
+                      alt="Original" 
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                      }}
+                    />
+                  </Box>
+                  {!processedImage && (
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Button 
+                        variant="contained" 
+                        color="primary"
+                        onClick={handleProcess}
+                        disabled={processing}
+                        size="large"
+                      >
+                        {processing ? (
+                          <>
+                            <CircularProgress size={24} sx={{ mr: 1 }} color="inherit" />
+                            Processing...
+                          </>
+                        ) : (
+                          'Process Image'
+                        )}
+                      </Button>
+                    </Box>
+                  )}
+                </Paper>
+              )}
+
+              {processedImage && (
+                <Paper sx={{ p: 4 }}>
+                  <Typography variant="h6" gutterBottom align="center">
+                    Processed Image
+                  </Typography>
+                  <Box sx={{
+                    position: 'relative',
+                    width: '100%',
+                    pt: '75%', // 4:3 Aspect Ratio
+                    mb: 2
+                  }}>
+                    <img 
+                      src={processedImage} 
+                      alt="Processed" 
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Button 
+                      variant="contained" 
+                      color="primary"
+                      onClick={handleDownload}
+                      size="large"
+                    >
+                      Download
+                    </Button>
+                  </Box>
+                </Paper>
+              )}
+            </Box>
+          </Box>
+        </Container>
+      </Box>
+    </ThemeProvider>
   );
 }
 
