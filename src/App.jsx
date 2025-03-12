@@ -78,10 +78,10 @@ function App() {
       console.log('FormData created');
 
       // Log the URL we're sending to
-      console.log('Sending request to:', 'https://displatecustom-backend.onrender.com/process-image');
+      console.log('Sending request to:', 'https://displatecustom.onrender.com/process-image');
 
       // Send to server
-      const processedResponse = await fetch('https://displatecustom-backend.onrender.com/process-image', {
+      const processedResponse = await fetch('https://displatecustom.onrender.com/process-image', {
         method: 'POST',
         body: formData,
         credentials: 'omit'
