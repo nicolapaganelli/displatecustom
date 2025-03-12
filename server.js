@@ -7,16 +7,18 @@ const app = express();
 const upload = multer();
 
 // Enable CORS with more permissive settings
-app.use(cors({
-  origin: '*', // Allow all origins temporarily for testing
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false // Set to false since we're using origin: '*'
-}));
+app.use(cors());  // Allow all origins by default
+
+// Add OPTIONS handling for preflight requests
+app.options('*', cors());  // Enable pre-flight for all routes
 
 // Add logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  // Add CORS headers explicitly
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
   next();
 });
 
@@ -108,6 +110,7 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
 
     console.log('Image processed successfully');
     res.set('Content-Type', 'image/jpeg');
+    res.set('Access-Control-Allow-Origin', '*');  // Ensure CORS headers are set for the response
     res.send(processedBuffer);
   } catch (error) {
     console.error('Error processing image:', error);
@@ -116,9 +119,8 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || '0.0.0.0'; // Changed to 0.0.0.0 to accept all incoming connections
+const HOST = process.env.HOST || '0.0.0.0';
 
-// Add proper error handling for the server
 const server = app.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
   console.log('CORS enabled for all origins');

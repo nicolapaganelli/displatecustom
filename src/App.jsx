@@ -127,8 +127,11 @@ function App() {
       // Send to server
       const processedResponse = await fetch('https://displatecustom.onrender.com/process-image', {
         method: 'POST',
-        body: formData,
-        credentials: 'omit'
+        mode: 'cors',
+        headers: {
+          'Accept': 'image/jpeg',
+        },
+        body: formData
       });
 
       console.log('Response status:', processedResponse.status);
