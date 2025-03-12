@@ -9,8 +9,8 @@ export default defineConfig(({ command }) => ({
     host: 'localhost',
     open: true // This will open the browser automatically
   },
-  // Only use the /displater/ base in production (build)
-  base: command === 'build' ? '/displater/' : '/',
+  // Use the repository name as base URL in production
+  base: command === 'build' ? '/displatecustom/' : '/',
   build: {
     outDir: 'dist',
     sourcemap: true
