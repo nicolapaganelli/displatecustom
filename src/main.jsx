@@ -1,27 +1,24 @@
 import React from 'react'
-import { createRoot } from 'react-dom/client'
+import ReactDOM from 'react-dom/client'
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import { createTheme } from '@mui/material/styles';
 import App from './App'
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import '@fontsource/roboto/300.css';
+import '@fontsource/roboto/400.css';
+import '@fontsource/roboto/500.css';
+import '@fontsource/roboto/700.css';
+import './index.css';
 
-// Create a theme instance
-const theme = createTheme({
-  typography: {
-    fontFamily: [
-      '-apple-system',
-      'BlinkMacSystemFont',
-      '"Segoe UI"',
-      'Roboto',
-      '"Helvetica Neue"',
-      'Arial',
-      'sans-serif',
-      '"Apple Color Emoji"',
-      '"Segoe UI Emoji"',
-      '"Segoe UI Symbol"',
-    ].join(','),
-  },
-});
+const theme = createTheme();
 
-createRoot(document.getElementById('root')).render(
+// Error boundary for development
+if (process.env.NODE_ENV === 'development') {
+  window.onerror = (message, source, lineno, colno, error) => {
+    console.error('Global error:', { message, source, lineno, colno, error });
+  };
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
