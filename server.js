@@ -8,9 +8,9 @@ const upload = multer();
 
 // Enable CORS for all routes
 app.use(cors({
-  origin: 'http://localhost:3000', // Allow frontend origin explicitly
-  methods: ['GET', 'POST'],        // Allow specific methods
-  credentials: true                // Allow credentials
+  origin: ['http://localhost:3000', 'https://nicolapaganelli.github.io'],
+  methods: ['GET', 'POST'],
+  credentials: true
 }));
 
 // Basic error handling middleware
@@ -96,11 +96,11 @@ app.post('/process-image', upload.single('image'), async (req, res) => {
   }
 });
 
-const PORT = 3001;
-const HOST = 'localhost';
+const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || 'localhost';
 
 // Add proper error handling for the server
-const server = app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
 }).on('error', (error) => {
   if (error.code === 'EADDRINUSE') {

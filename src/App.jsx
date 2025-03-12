@@ -75,7 +75,7 @@ function App() {
       formData.append('image', blob);
 
       // Send to server
-      const processedResponse = await fetch('http://localhost:3001/process-image', {
+      const processedResponse = await fetch('https://displatecustom-backend.onrender.com/process-image', {
         method: 'POST',
         body: formData
       });
