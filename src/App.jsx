@@ -304,7 +304,7 @@ function App() {
       }}>
         <Container maxWidth="lg">
           <Typography variant="h4" component="h1" align="center" sx={{ mb: 4 }}>
-            Make your image custom Displate Ready
+            Make your image ready for a custom Displate! 
           </Typography>
 
           <Box sx={{ 
@@ -317,7 +317,7 @@ function App() {
             <Box>
               <Paper sx={{ p: 4, mb: 3 }}>
                 <Typography variant="h6" gutterBottom>
-                  This app will make your Image meet Requirements from Displate
+                  This app will make your image meet Requirements from Displate. 
                 </Typography>
                 <Box component="ul" sx={{ 
                   pl: 2,
@@ -350,7 +350,8 @@ function App() {
                 onClick={handleClick}
               >
                 <Typography sx={{ color: 'text.secondary' }}>
-                  Drag and drop an image here, or click to select one
+                  Drag and drop an image here, or click to select one (no data is stored).
+
                 </Typography>
               </Paper>
 
