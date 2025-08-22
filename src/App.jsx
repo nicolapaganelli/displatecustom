@@ -304,7 +304,7 @@ function App() {
       }}>
         <Container maxWidth="lg">
           <Typography variant="h4" component="h1" align="center" sx={{ mb: 4 }}>
-            Displate Image Processor
+            Make your image custom Displate Ready
           </Typography>
 
           <Box sx={{ 
@@ -317,7 +317,7 @@ function App() {
             <Box>
               <Paper sx={{ p: 4, mb: 3 }}>
                 <Typography variant="h6" gutterBottom>
-                  Image Requirements
+                  This app will make your Image meet Requirements from Displate
                 </Typography>
                 <Box component="ul" sx={{ 
                   pl: 2,
